@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".presentation.ui.path.PathFragment">
+
+    <fragment
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:id="@+id/map_Fragment" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:minHeight="100dp"
+            android:layout_margin="8dp">
+
+            <EditText
+                android:id="@+id/origin_tf"
+                android:layout_width="250dp"
+                android:layout_height="40dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:hint="откуда"
+                android:importantForAutofill="no"
+                android:inputType="text" />
+
+            <EditText
+                android:id="@+id/destination_tf"
+                android:layout_width="250dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="8dp"
+
+                android:hint="куда"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/origin_tf"
+                android:importantForAutofill="no"
+                android:inputType="text" />
+
+            <com.google.android.material.button.MaterialButton
+                android:layout_width="80dp"
+                android:layout_height="35dp"
+                android:id="@+id/path_bt"
+                android:text="путь"
+                android:textAllCaps="false"
+                app:layout_constraintTop_toBottomOf="@id/destination_tf"
+                app:layout_constraintEnd_toEndOf="@id/destination_tf"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+</androidx.constraintlayout.widget.ConstraintLayout>
