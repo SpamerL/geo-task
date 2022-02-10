@@ -1,7 +1,8 @@
-package com.spamerl.geo_task
+package com.spamerl.geo_task.presentation
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.spamerl.geo_task.R
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
