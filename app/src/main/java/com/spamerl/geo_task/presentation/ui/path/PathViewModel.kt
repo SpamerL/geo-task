@@ -1,34 +1,93 @@
 package com.spamerl.geo_task.presentation.ui.path
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
+import com.google.android.libraries.places.api.net.FetchPlaceResponse
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.android.libraries.places.ktx.api.net.awaitFindAutocompletePredictions
 import com.spamerl.geo_task.data.model.DirectionsAPIResponse
 import com.spamerl.geo_task.domain.usecase.DirectionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 @HiltViewModel
 class PathViewModel @Inject constructor(
-    private val useCase: DirectionUseCase
+    private val useCase: DirectionUseCase,
+    private val placesClient: PlacesClient
 ) : ViewModel() {
-    private val _viewState = MutableStateFlow<PathViewState>(PathViewState.Empty)
-    val viewState: StateFlow<PathViewState> = _viewState
+    private val _events = MutableStateFlow<PlacesSearchEvent>(PlacesSearchEventLoading)
+    val events: StateFlow<PlacesSearchEvent> get() = _events
 
-    val _origin = MutableStateFlow<String>("")
-    val origin: StateFlow<String> = _origin
+    private val _origin = MutableStateFlow(LatLng(0.0, 0.0))
+    val origin: StateFlow<LatLng> get() = _origin
 
-    val _destination = MutableStateFlow<String>("")
-    val destination: StateFlow<String> = _destination
+    private val _destination = MutableStateFlow(LatLng(0.0, 0.0))
+    val destination: StateFlow<LatLng> get() = _destination
 
-    private val _path = MutableStateFlow<DirectionsAPIResponse>(DirectionsAPIResponse())
-    val path: StateFlow<DirectionsAPIResponse> = _path.asStateFlow()
+    private val _path = MutableStateFlow(DirectionsAPIResponse())
+    val path: StateFlow<DirectionsAPIResponse> get() = _path
+    var isOriginChanged: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    var isDestinationChanged: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
-    fun getDirection(origin: String, destination: String) {
-        useCase.execute(origin, destination)
+    private var job: Job? = null
+
+    fun getDirection(origin: LatLng, destination: LatLng) {
+        val from: String = origin.latitude.toString() + "," + origin.longitude.toString()
+        val to: String = destination.latitude.toString() + "," + destination.longitude.toString()
+        useCase.execute(from, to)
             .onEach { _path.value = it }
             .flowOn(Dispatchers.IO)
             .launchIn(viewModelScope)
+    }
+
+    fun getLngLatFromID(placeId: String, source: String) {
+        val placeField = listOf(Place.Field.LAT_LNG)
+        val request = FetchPlaceRequest.newInstance(placeId, placeField)
+
+        if (source == "Origin") {
+            val response = placesClient.fetchPlace(request).addOnSuccessListener { response: FetchPlaceResponse ->
+                _origin.value = response.place.latLng
+                Log.i("getLngLatFromID - origin", origin.value.toString())
+            }
+        } else {
+            val response = placesClient.fetchPlace(request).addOnSuccessListener { response: FetchPlaceResponse ->
+                _destination.value = response.place.latLng
+                Log.i("getLngLatFromID - destination", destination.value.toString())
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun onSearchQueryChanged(query: String) {
+        var originChanged: Boolean = false
+        var destinationChanged: Boolean = false
+        if (isOriginChanged.value == true) {
+            originChanged = true
+        }
+        if (isDestinationChanged.value == true) {
+            destinationChanged = true
+        }
+        job?.cancel()
+
+        val handler = CoroutineExceptionHandler { _, throwable ->
+            _events.value = PlacesSearchEventError(throwable)
+        }
+
+        job = viewModelScope.launch(handler) {
+            delay(200)
+
+            val response = placesClient
+                .awaitFindAutocompletePredictions {
+                    this.query = query
+                }
+
+            _events.value = PlacesSearchEventFound(response.autocompletePredictions, originChanged, destinationChanged)
+        }
     }
 }
