@@ -52,7 +52,7 @@ class OriginFragment : Fragment(), OnMapReadyCallback {
 
         Places.initialize(
             appContext,
-            "AIzaSyB0nXxVKfiGQWF33jdqatGhr8EM2yfM5L4"
+            ""
         )
 
         val placesClient = Places.createClient(requireContext())
