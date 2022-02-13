@@ -1,6 +1,5 @@
 package com.spamerl.geo_task.presentation.ui.path
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
@@ -14,6 +13,7 @@ import com.spamerl.geo_task.domain.usecase.DirectionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -32,6 +32,7 @@ class PathViewModel @Inject constructor(
 
     private val _path = MutableStateFlow(DirectionsAPIResponse())
     val path: StateFlow<DirectionsAPIResponse> get() = _path
+
     var isOriginChanged: MutableStateFlow<Boolean> = MutableStateFlow(false)
     var isDestinationChanged: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
@@ -51,26 +52,26 @@ class PathViewModel @Inject constructor(
         val request = FetchPlaceRequest.newInstance(placeId, placeField)
 
         if (source == "Origin") {
-            val response = placesClient.fetchPlace(request).addOnSuccessListener { response: FetchPlaceResponse ->
-                _origin.value = response.place.latLng
-                Log.i("getLngLatFromID - origin", origin.value.toString())
+            placesClient.fetchPlace(request).addOnSuccessListener { response: FetchPlaceResponse ->
+                _origin.value = response.place.latLng!!
+                Timber.i(origin.value.toString())
             }
         } else {
-            val response = placesClient.fetchPlace(request).addOnSuccessListener { response: FetchPlaceResponse ->
-                _destination.value = response.place.latLng
-                Log.i("getLngLatFromID - destination", destination.value.toString())
+            placesClient.fetchPlace(request).addOnSuccessListener { response: FetchPlaceResponse ->
+                _destination.value = response.place.latLng!!
+                Timber.i(destination.value.toString())
             }
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun onSearchQueryChanged(query: String) {
-        var originChanged: Boolean = false
-        var destinationChanged: Boolean = false
-        if (isOriginChanged.value == true) {
+        var originChanged = false
+        var destinationChanged = false
+        if (isOriginChanged.value) {
             originChanged = true
         }
-        if (isDestinationChanged.value == true) {
+        if (isDestinationChanged.value) {
             destinationChanged = true
         }
         job?.cancel()

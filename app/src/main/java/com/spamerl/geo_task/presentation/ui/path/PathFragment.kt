@@ -47,8 +47,8 @@ class PathFragment : Fragment(), OnMapReadyCallback {
     ): View {
 
         _binding = FragmentPathBinding.inflate(inflater, container, false)
-        // binding.originPredictionRv.visibility = GONE
-        // binding.destinationPredictionRv.visibility = GONE
+        binding.originPredictionRv.visibility = GONE
+        binding.destinationPredictionRv.visibility = GONE
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -57,13 +57,9 @@ class PathFragment : Fragment(), OnMapReadyCallback {
                         when (event) {
                             is PlacesSearchEventFound -> {
                                 if (event.originChanged) {
-                                    binding.originPredictionRv.visibility = VISIBLE
-                                    binding.destinationPredictionRv.visibility = GONE
                                     originAdapter.setPredictions(event.places)
                                 }
                                 if (event.destinationChanged) {
-                                    binding.originPredictionRv.visibility = GONE
-                                    binding.destinationPredictionRv.visibility = VISIBLE
                                     destinationAdapter.setPredictions(event.places)
                                 }
                             }
@@ -131,6 +127,7 @@ class PathFragment : Fragment(), OnMapReadyCallback {
                 viewModel.isOriginChanged.value = true
                 viewModel.isDestinationChanged.value = false
                 viewModel.onSearchQueryChanged(text.toString())
+                binding.originPredictionRv.visibility = VISIBLE
             }
         }
 
@@ -139,6 +136,7 @@ class PathFragment : Fragment(), OnMapReadyCallback {
                 viewModel.isOriginChanged.value = false
                 viewModel.isDestinationChanged.value = true
                 viewModel.onSearchQueryChanged(text.toString())
+                binding.destinationPredictionRv.visibility = VISIBLE
             }
         }
 
