@@ -10,6 +10,6 @@ interface DirectionsAPI {
     suspend fun getDirection(
         @Query("origin") origin: String,
         @Query("destination") destination: String,
-        @Query("key")key: String = "AIzaSyB0nXxVKfiGQWF33jdqatGhr8EM2yfM5L4"
+        @Query("key")key: String = 
     ): DirectionsAPIResponse
 }
