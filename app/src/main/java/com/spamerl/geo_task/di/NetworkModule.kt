@@ -1,6 +1,11 @@
 package com.spamerl.geo_task.di
 
 import android.content.Context
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.AutocompleteSessionToken
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.spamerl.geo_task.GeoTask
+import com.spamerl.geo_task.data.LocationDataSource
 import com.spamerl.geo_task.data.service.DirectionsAPI
 import dagger.Module
 import dagger.Provides
@@ -34,4 +39,19 @@ object NetworkModule {
     @Singleton
     fun providesDirectionsApi(retrofit: Retrofit.Builder): DirectionsAPI =
         retrofit.baseUrl(BASE_URL).build().create(DirectionsAPI::class.java)
+
+    @Provides
+    @Singleton
+    fun providesPlaceClient(@ApplicationContext context: Context): PlacesClient =
+        Places.createClient(context)
+
+    @Provides
+    @Singleton
+    fun providesAutocompleteToken(): AutocompleteSessionToken = AutocompleteSessionToken.newInstance()
+
+    @Provides
+    @Singleton
+    fun providesLocationDataSource(
+        @ApplicationContext context: Context
+    ): LocationDataSource = LocationDataSource(context, (context.applicationContext as GeoTask).applicationScope)
 }

@@ -1,5 +1,8 @@
 package com.spamerl.geo_task.domain.repository
 
-class LocationRepository() {
-    // fun GetPath(origin: String, destination: String) =
+import android.location.Location
+import kotlinx.coroutines.flow.Flow
+
+interface LocationRepository {
+    fun getUserLocation(): Flow<Location>
 }

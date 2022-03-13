@@ -5,4 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface DestinationRepository {
     fun getDirection(origin: String, destination: String): Flow<DirectionsAPIResponse>
+
+    // fun getAutocompletePrediction(query: String): Flow<AutocompletePrediction>
 }

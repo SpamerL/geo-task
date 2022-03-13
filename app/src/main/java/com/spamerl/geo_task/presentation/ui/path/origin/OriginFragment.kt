@@ -1,30 +1,35 @@
 package com.spamerl.geo_task.presentation.ui.path.origin
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.app.ActivityCompat
+import android.widget.AdapterView.OnItemClickListener
+import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import com.google.android.gms.common.api.Status
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.libraries.places.api.Places
-import com.google.android.libraries.places.api.model.Place
-import com.google.android.libraries.places.widget.AutocompleteSupportFragment
-import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.libraries.places.api.model.AutocompletePrediction
+import com.google.maps.android.ktx.addMarker
 import com.spamerl.geo_task.R
 import com.spamerl.geo_task.databinding.OriginFragmentBinding
-import com.spamerl.geo_task.presentation.ui.path.viewPager.ViewPagerFragment
+import com.spamerl.geo_task.domain.model.PlacesSearchEventEmpty
+import com.spamerl.geo_task.domain.model.PlacesSearchEventError
+import com.spamerl.geo_task.domain.model.PlacesSearchEventFound
+import com.spamerl.geo_task.domain.model.PlacesSearchEventLoading
 import com.spamerl.geo_task.presentation.ui.path.viewPager.ViewPagerViewModel
+import com.spamerl.geo_task.presentation.ui.util.PlacesPredictionAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
 
 @AndroidEntryPoint
 class OriginFragment : Fragment(), OnMapReadyCallback {
@@ -32,7 +37,8 @@ class OriginFragment : Fragment(), OnMapReadyCallback {
     private var mGoogleMap: GoogleMap? = null
     private var _binding: OriginFragmentBinding? = null
     private val binding get() = _binding!!
-    private val viewModel by viewModels<ViewPagerViewModel>()
+    private val viewModel: ViewPagerViewModel by activityViewModels()
+    private var adapter: PlacesPredictionAdapter? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,64 +46,107 @@ class OriginFragment : Fragment(), OnMapReadyCallback {
         savedInstanceState: Bundle?
     ): View {
         _binding = OriginFragmentBinding.inflate(inflater, container, false)
-        return binding.root
-    }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        val appContext = requireContext().applicationContext
         val map = childFragmentManager.findFragmentById(R.id.origin_map) as SupportMapFragment
         map.getMapAsync(this)
 
-        Places.initialize(
-            appContext,
-            ""
-        )
+        setupUI(binding)
 
-        val placesClient = Places.createClient(requireContext())
-        val info = Places.isInitialized()
-        Log.d("Places.isInitialized ?", info.toString())
+        setupFlow()
 
-        val placesAutocomplete = childFragmentManager.findFragmentById(R.id.places_autocomplete) as AutocompleteSupportFragment
-
-        placesAutocomplete.setPlaceFields(listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG))
-        placesAutocomplete.setOnPlaceSelectedListener(object : PlaceSelectionListener {
-            override fun onError(status: Status) {
-                Log.d("place error:", status.toString())
-            }
-
-            override fun onPlaceSelected(place: Place) {
-                mGoogleMap?.addMarker(
-                    MarkerOptions()
-                        .position(place.latLng!!)
-                )
-                mGoogleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(place.latLng!!, 12f))
-                viewModel.originLatLng.value = place.latLng!!
-            }
-        })
+        return binding.root
     }
 
+    private fun setupUI(binding: OriginFragmentBinding) {
+        val autoCompleteTextView = binding.originSearchTv
+        adapter = PlacesPredictionAdapter(requireContext(), R.layout.autocomplete_item)
+        binding.originSearchTv.setAdapter(adapter)
+        autoCompleteTextView.addTextChangedListener(object : TextWatcher {
+
+            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
+
+            override fun afterTextChanged(s: Editable) {}
+
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                if (s.length > 1) {
+                    viewModel.autocomplete(s.toString())
+                    Log.e("debug -- ", s.toString())
+                }
+            }
+        })
+
+        autoCompleteTextView.dropDownHeight = 400
+
+        autoCompleteTextView.onItemClickListener =
+            OnItemClickListener { _, _, position, _ ->
+                val googlePlace: AutocompletePrediction =
+                    autoCompleteTextView.adapter.getItem(position) as AutocompletePrediction
+
+                autoCompleteTextView.setText(googlePlace.getPrimaryText(null).toString())
+
+                viewModel.getLatLng(googlePlace.placeId, true)
+
+                mGoogleMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(viewModel.originLatLng.value, 12f))
+            }
+    }
+
+    private fun setupFlow() {
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.events.collect { event ->
+                when (event) {
+                    is PlacesSearchEventFound -> {
+                        adapter!!.setData(event.places)
+
+                        adapter!!.notifyDataSetChanged()
+                    }
+                    is PlacesSearchEventError -> {
+                        Toast.makeText(requireContext(), event.exception.message, Toast.LENGTH_SHORT).show()
+                    }
+                    is PlacesSearchEventEmpty -> {
+                        Toast.makeText(requireContext(), "empty", Toast.LENGTH_SHORT).show()
+                    }
+                    is PlacesSearchEventLoading -> {
+                        Toast.makeText(requireContext(), "search", Toast.LENGTH_SHORT).show()
+
+                        Toast.makeText(requireContext(), viewModel.userLocationLatLng.value.toString(), Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.userLocationLatLng.collect {
+                if (it != LatLng(0.0, 0.0)) {
+                    mGoogleMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 12f))
+
+                    viewModel.unsubscribeToLocationUpdates()
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.originLatLng.collect {
+                if (it != LatLng(0.0, 0.0)) {
+                    mGoogleMap!!.clear()
+
+                    mGoogleMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 12f))
+
+                    mGoogleMap!!.addMarker {
+                        position(it)
+                    }
+                }
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
-        val appContext = context?.applicationContext
-        if (ActivityCompat.checkSelfPermission(
-                appContext!!,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                    appContext,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return
+
+        if (viewModel.userLocationLatLng.value != LatLng(0.0, 0.0)) {
+            mGoogleMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(viewModel.userLocationLatLng.value, 12f))
         }
+
         googleMap.isMyLocationEnabled = true
     }
 }

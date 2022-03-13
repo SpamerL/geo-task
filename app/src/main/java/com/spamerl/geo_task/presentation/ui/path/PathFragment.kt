@@ -1,40 +1,71 @@
 package com.spamerl.geo_task.presentation.ui.path
 
+import android.annotation.SuppressLint
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import com.spamerl.geo_task.R
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.maps.android.PolyUtil
+import com.google.maps.android.ktx.addMarker
+import com.google.maps.android.ktx.addPolyline
 import com.spamerl.geo_task.databinding.FragmentPathBinding
+import com.spamerl.geo_task.presentation.ui.path.viewPager.ViewPagerViewModel
+import kotlinx.coroutines.flow.collect
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
+class PathFragment : Fragment(), OnMapReadyCallback {
 
-/**
- * A simple [Fragment] subclass.
- * Use the [PathFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class PathFragment : Fragment() {
-
-    companion object {
-        fun newInstance() = PathFragment()
-    }
-
-    private val binding: FragmentPathBinding? = null
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
+    private var mGoogleMap: GoogleMap? = null
+    private var _binding: FragmentPathBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: ViewPagerViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_path, container, false)
+        _binding = FragmentPathBinding.inflate(inflater, container, false)
+
+        return binding.root
+    }
+
+    private fun setupFlow() {
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.path.collect {
+                val polyline = PolyUtil.decode(it.routes?.get(0)?.overviewPolyline!!.points)
+                mGoogleMap!!.addPolyline {
+                    addAll(polyline)
+                    color(Color.BLACK)
+                }
+                mGoogleMap!!.addMarker {
+                    position(viewModel.originLatLng.value)
+                }
+                mGoogleMap!!.addMarker {
+                    position(viewModel.destinationLatLng.value)
+                }
+
+                mGoogleMap!!.moveCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        viewModel.midpoint(),
+                        10f
+                    )
+                )
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    override fun onMapReady(googleMap: GoogleMap) {
+        mGoogleMap = googleMap
+        setupFlow()
+        mGoogleMap!!.isMyLocationEnabled = true
     }
 }
