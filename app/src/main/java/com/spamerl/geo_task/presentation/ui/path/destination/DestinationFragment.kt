@@ -28,9 +28,12 @@ import com.spamerl.geo_task.domain.model.PlacesSearchEventFound
 import com.spamerl.geo_task.domain.model.PlacesSearchEventLoading
 import com.spamerl.geo_task.presentation.ui.path.viewPager.ViewPagerViewModel
 import com.spamerl.geo_task.presentation.ui.util.PlacesPredictionAdapter
+import com.spamerl.geo_task.presentation.ui.util.hideKeyboard
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class DestinationFragment : Fragment(), OnMapReadyCallback {
 
@@ -55,7 +58,7 @@ class DestinationFragment : Fragment(), OnMapReadyCallback {
 
         setupUI(binding)
 
-        setupFlow()
+        // setupFlow()
 
         return binding.root
     }
@@ -90,6 +93,8 @@ class DestinationFragment : Fragment(), OnMapReadyCallback {
                 autocompletePrediction.setText(googlePlace.getPrimaryText(null).toString())
 
                 viewModel.getLatLng(googlePlace.placeId, false)
+
+                requireView().hideKeyboard()
             }
     }
 
@@ -97,6 +102,11 @@ class DestinationFragment : Fragment(), OnMapReadyCallback {
 
         viewLifecycleOwner.lifecycleScope.launchWhenStarted {
             viewModel.destinationLatLng.collect {
+                if (viewModel.originLatLng.value != LatLng(0.0, 0.0)) {
+                    mGoogleMap!!.addMarker {
+                        position(viewModel.originLatLng.value)
+                    }
+                }
                 if (it != LatLng(0.0, 0.0)) {
                     mGoogleMap!!.addMarker {
                         position(it)
@@ -105,7 +115,7 @@ class DestinationFragment : Fragment(), OnMapReadyCallback {
                     mGoogleMap!!.moveCamera(
                         CameraUpdateFactory.newLatLngZoom(
                             it,
-                            12f
+                            15f
                         )
                     )
                     if (viewModel.originLatLng.value != LatLng(0.0, 0.0)) {
@@ -144,6 +154,7 @@ class DestinationFragment : Fragment(), OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
+        setupFlow()
 
         googleMap.isMyLocationEnabled = true
 

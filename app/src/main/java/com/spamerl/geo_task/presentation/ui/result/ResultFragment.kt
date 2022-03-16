@@ -65,7 +65,7 @@ class ResultFragment : Fragment(), OnMapReadyCallback {
                     mGoogleMap!!.moveCamera(
                         CameraUpdateFactory.newLatLngZoom(
                             viewModel.midpoint(),
-                            11f
+                            10f
                         )
                     )
                 }

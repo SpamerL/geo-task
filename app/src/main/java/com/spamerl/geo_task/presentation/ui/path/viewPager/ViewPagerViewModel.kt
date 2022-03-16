@@ -142,7 +142,7 @@ class ViewPagerViewModel @Inject constructor(
         return LatLng(lat, lng)
     }
 
-    fun midpoint() : LatLng {
+    fun midpoint(): LatLng {
         val midpointLat: Double = (originLatLng.value.latitude + destinationLatLng.value.latitude) / 2
         val midpointLng: Double = (originLatLng.value.longitude + destinationLatLng.value.longitude) / 2
         return LatLng(midpointLat, midpointLng)

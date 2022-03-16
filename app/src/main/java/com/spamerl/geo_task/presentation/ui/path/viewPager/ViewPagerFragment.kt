@@ -12,6 +12,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.tabs.TabLayoutMediator
 import com.spamerl.geo_task.R
 import com.spamerl.geo_task.databinding.ViewPagerFragmentBinding
+import com.spamerl.geo_task.presentation.ui.util.margin
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 
@@ -60,9 +61,11 @@ class ViewPagerFragment : Fragment() {
                 when (it) {
                     true -> {
                         binding.searchBt.visibility = View.VISIBLE
+                        binding.cardHolder.margin(bottom = 8F)
                     }
                     false -> {
                         binding.searchBt.visibility = View.GONE
+                        binding.cardHolder.margin(bottom = 60F)
                     }
                 }
             }
